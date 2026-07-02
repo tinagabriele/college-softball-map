@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>College Softball Programs in the Continental US</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        
+        #map { 
+            width: 100%; 
+            height: calc(100vh - 60px); 
+        }
+        
+        .header {
+            background: #1a1a2e;
+            color: white;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 60px;
+        }
+        
+        .header h1 {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        
+        .header .count {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        .legend {
+            position: absolute;
+            bottom: 30px;
+            right: 10px;
+            background: white;
+            border-radius: 8px;
+            padding: 12px 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            font-size: 0.8rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .legend h3 {
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+            color: #333;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 4px;
+            cursor: pointer;
+            padding: 2px 4px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        
+        .legend-item:hover {
+            background: #f0f0f0;
+        }
+        
+        .legend-item.disabled {
+            opacity: 0.3;
+        }
+        
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            flex-shrink: 0;
+        }
+        
+        .legend-label {
+            color: #444;
+        }
+        
+        .legend-count {
+            margin-left: auto;
+            padding-left: 8px;
+            color: #888;
+            font-weight: 600;
+        }
+        
+        .filter-panel {
+            position: absolute;
+            top: 70px;
+            left: 10px;
+            background: white;
+            border-radius: 8px;
+            padding: 12px 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            font-size: 0.8rem;
+        }
+        
+        .filter-panel h3 {
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+        }
+        
+        .filter-panel input {
+            width: 200px;
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        
+        .filter-panel input:focus {
+            outline: none;
+            border-color: #4a90d9;
+        }
+        
+        .popup-content h4 {
+            margin-bottom: 4px;
+            color: #1a1a2e;
+        }
+        
+        .popup-content p {
+            margin: 2px 0;
+            font-size: 0.85rem;
+            color: #555;
+        }
+        
+        .popup-content .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: white;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🥎 College Softball Programs — Continental US</h1>
+        <span class="count" id="visible-count">Loading...</span>
+    </div>
+    <div id="map"></div>
+    
+    <div class="filter-panel">
+        <h3>🔍 Search</h3>
+        <input type="text" id="search" placeholder="School name, state, conference...">
+    </div>
+
+    <div class="legend" id="legend"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Initialize map centered on continental US
+        const map = L.map('map', {
+            center: [39.5, -98.35],
+            zoom: 4,
+            minZoom: 3,
+            maxZoom: 18
+        });
+
+        // Add tile layer (CartoDB Positron for clean look)
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 20
+        }).addTo(map);
+
+        // Color mapping
+        const colors = {
+            'NCAA|Division I': '#e41a1c',
+            'NCAA|Division II': '#377eb8',
+            'NCAA|Division III': '#4daf4a',
+            'NAIA|NAIA': '#984ea3',
+            'NJCAA|Division I': '#ff7f00',
+            'NJCAA|Division II': '#d4a017',
+            'NJCAA|Division III': '#a65628',
+            'NWAC|NWAC': '#f781bf',
+            '3C2A|3C2A': '#999999',
+            'USCAA|USCAA': '#66c2a5'
+        };
+
+        const labels = {
+            'NCAA|Division I': 'NCAA D1',
+            'NCAA|Division II': 'NCAA D2',
+            'NCAA|Division III': 'NCAA D3',
+            'NAIA|NAIA': 'NAIA',
+            'NJCAA|Division I': 'NJCAA D1',
+            'NJCAA|Division II': 'NJCAA D2',
+            'NJCAA|Division III': 'NJCAA D3',
+            'NWAC|NWAC': 'NWAC',
+            '3C2A|3C2A': 'CCCAA',
+            'USCAA|USCAA': 'USCAA'
+        };
+
+        let allMarkers = [];
+        let activeFilters = new Set(Object.keys(colors));
+        let searchTerm = '';
+
+        // Load data
+        fetch('data.geojson')
+            .then(r => r.json())
+            .then(data => {
+                const counts = {};
+                
+                data.features.forEach(feature => {
+                    const props = feature.properties;
+                    const coords = feature.geometry.coordinates;
+                    const key = `${props.association}|${props.division}`;
+                    const color = colors[key] || '#333';
+                    
+                    counts[key] = (counts[key] || 0) + 1;
+
+                    const marker = L.circleMarker([coords[1], coords[0]], {
+                        radius: 5,
+                        fillColor: color,
+                        color: '#fff',
+                        weight: 1,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    });
+
+                    const popup = `
+                        <div class="popup-content">
+                            <h4>${props.name}</h4>
+                            <p>${props.city ? props.city + ', ' : ''}${props.state}</p>
+                            <p>${props.conference || ''}</p>
+                            <span class="badge" style="background:${color}">${labels[key] || key}</span>
+                        </div>
+                    `;
+                    marker.bindPopup(popup);
+                    
+                    marker._data = {
+                        key: key,
+                        name: props.name.toLowerCase(),
+                        state: (props.state || '').toLowerCase(),
+                        conference: (props.conference || '').toLowerCase(),
+                        city: (props.city || '').toLowerCase()
+                    };
+
+                    allMarkers.push(marker);
+                    marker.addTo(map);
+                });
+
+                buildLegend(counts);
+                updateCount();
+            });
+
+        function buildLegend(counts) {
+            const legend = document.getElementById('legend');
+            let html = '<h3>Associations</h3>';
+            
+            const order = [
+                'NCAA|Division I', 'NCAA|Division II', 'NCAA|Division III',
+                'NAIA|NAIA', 'NJCAA|Division I', 'NJCAA|Division II', 'NJCAA|Division III',
+                'NWAC|NWAC', '3C2A|3C2A', 'USCAA|USCAA'
+            ];
+
+            order.forEach(key => {
+                const count = counts[key] || 0;
+                const color = colors[key];
+                const label = labels[key];
+                html += `
+                    <div class="legend-item" data-key="${key}" onclick="toggleFilter('${key}')">
+                        <div class="legend-dot" style="background:${color}"></div>
+                        <span class="legend-label">${label}</span>
+                        <span class="legend-count">${count}</span>
+                    </div>
+                `;
+            });
+
+            legend.innerHTML = html;
+        }
+
+        function toggleFilter(key) {
+            if (activeFilters.has(key)) {
+                activeFilters.delete(key);
+            } else {
+                activeFilters.add(key);
+            }
+            
+            // Update legend styling
+            document.querySelectorAll('.legend-item').forEach(el => {
+                if (activeFilters.has(el.dataset.key)) {
+                    el.classList.remove('disabled');
+                } else {
+                    el.classList.add('disabled');
+                }
+            });
+
+            applyFilters();
+        }
+
+        function applyFilters() {
+            allMarkers.forEach(marker => {
+                const d = marker._data;
+                const matchesFilter = activeFilters.has(d.key);
+                const matchesSearch = !searchTerm || 
+                    d.name.includes(searchTerm) || 
+                    d.state.includes(searchTerm) || 
+                    d.conference.includes(searchTerm) ||
+                    d.city.includes(searchTerm);
+
+                if (matchesFilter && matchesSearch) {
+                    if (!map.hasLayer(marker)) marker.addTo(map);
+                } else {
+                    if (map.hasLayer(marker)) map.removeLayer(marker);
+                }
+            });
+            updateCount();
+        }
+
+        function updateCount() {
+            const visible = allMarkers.filter(m => map.hasLayer(m)).length;
+            document.getElementById('visible-count').textContent = 
+                `Showing ${visible.toLocaleString()} of ${allMarkers.length.toLocaleString()} programs`;
+        }
+
+        // Search functionality
+        document.getElementById('search').addEventListener('input', (e) => {
+            searchTerm = e.target.value.toLowerCase().trim();
+            applyFilters();
+        });
+    </script>
+</body>
+</html>
