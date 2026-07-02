@@ -3,332 +3,654 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>College Softball Programs in the Continental US</title>
+    <title>Collegiate Softball Opportunity Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-        
-        #map { 
-            width: 100%; 
-            height: calc(100vh - 60px); 
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+            background: #0d0d0d;
+            color: #f0f0f0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
-        
+
+        /* ── HEADER ── */
         .header {
-            background: #1a1a2e;
-            color: white;
-            padding: 12px 24px;
+            background: #0d0d0d;
+            border-bottom: 1px solid #1e1e1e;
+            padding: 0 24px;
+            height: 60px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            height: 60px;
-        }
-        
-        .header h1 {
-            font-size: 1.2rem;
-            font-weight: 600;
-        }
-        
-        .header .count {
-            font-size: 0.9rem;
-            opacity: 0.8;
-        }
-        
-        .legend {
-            position: absolute;
-            bottom: 30px;
-            right: 10px;
-            background: white;
-            border-radius: 8px;
-            padding: 12px 16px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+            flex-shrink: 0;
             z-index: 1000;
-            font-size: 0.8rem;
-            max-height: 300px;
-            overflow-y: auto;
         }
-        
-        .legend h3 {
-            margin-bottom: 8px;
-            font-size: 0.85rem;
-            color: #333;
-        }
-        
-        .legend-item {
+
+        .header-left {
             display: flex;
             align-items: center;
-            margin-bottom: 4px;
-            cursor: pointer;
-            padding: 2px 4px;
-            border-radius: 4px;
-            transition: background 0.2s;
+            gap: 12px;
         }
-        
-        .legend-item:hover {
-            background: #f0f0f0;
+
+        .header h1 {
+            font-size: 1rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            color: #ffffff;
         }
-        
-        .legend-item.disabled {
-            opacity: 0.3;
+
+        .header .subtitle {
+            font-size: 0.75rem;
+            color: #555;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
         }
-        
-        .legend-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 8px;
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .program-count {
+            font-size: 0.8rem;
+            color: #555;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .program-count span {
+            color: #00e5ff;
+            font-weight: 600;
+        }
+
+        /* ── TOOLBAR ── */
+        .toolbar {
+            background: #111111;
+            border-bottom: 1px solid #1e1e1e;
+            padding: 0 24px;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+            z-index: 999;
+        }
+
+        /* Search */
+        .search-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 10px;
+            color: #444;
+            font-size: 0.85rem;
+            pointer-events: none;
+        }
+
+        #search {
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 6px;
+            color: #f0f0f0;
+            font-size: 0.82rem;
+            padding: 7px 12px 7px 30px;
+            width: 220px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        #search::placeholder { color: #444; }
+
+        #search:focus {
+            border-color: #00e5ff44;
+            background: #1e1e1e;
+        }
+
+        .divider {
+            width: 1px;
+            height: 28px;
+            background: #222;
             flex-shrink: 0;
         }
-        
-        .legend-label {
+
+        /* Filter pills */
+        .filter-label {
+            font-size: 0.72rem;
             color: #444;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            flex-shrink: 0;
         }
-        
-        .legend-count {
-            margin-left: auto;
-            padding-left: 8px;
+
+        .filters {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .filter-btn {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            border: 1px solid transparent;
+            font-size: 0.78rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.18s ease;
+            background: #1a1a1a;
             color: #888;
-            font-weight: 600;
+            border-color: #252525;
+            letter-spacing: 0.01em;
+            white-space: nowrap;
         }
-        
-        .filter-panel {
-            position: absolute;
-            top: 70px;
-            left: 10px;
-            background: white;
-            border-radius: 8px;
-            padding: 12px 16px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.15);
-            z-index: 1000;
-            font-size: 0.8rem;
+
+        .filter-btn .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            transition: opacity 0.18s;
         }
-        
-        .filter-panel h3 {
-            margin-bottom: 8px;
-            font-size: 0.85rem;
+
+        .filter-btn .pill-count {
+            font-size: 0.7rem;
+            opacity: 0.6;
+            font-variant-numeric: tabular-nums;
         }
-        
-        .filter-panel input {
-            width: 200px;
-            padding: 6px 10px;
-            border: 1px solid #ddd;
+
+        .filter-btn.active {
+            color: #ffffff;
+            background: #1e1e1e;
+        }
+
+        .filter-btn.active.d1   { border-color: #00e5ff; box-shadow: 0 0 8px #00e5ff22; }
+        .filter-btn.active.d2   { border-color: #b388ff; box-shadow: 0 0 8px #b388ff22; }
+        .filter-btn.active.d3   { border-color: #69ff47; box-shadow: 0 0 8px #69ff4722; }
+        .filter-btn.active.other{ border-color: #ff6680; box-shadow: 0 0 8px #ff668022; }
+
+        .filter-btn.inactive {
+            opacity: 0.38;
+        }
+
+        /* Select All / Clear */
+        .ctrl-btn {
+            font-size: 0.72rem;
+            color: #444;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px 6px;
             border-radius: 4px;
-            font-size: 0.85rem;
+            transition: color 0.2s;
+            letter-spacing: 0.02em;
         }
-        
-        .filter-panel input:focus {
-            outline: none;
-            border-color: #4a90d9;
+        .ctrl-btn:hover { color: #aaa; }
+
+        /* ── MAP ── */
+        #map {
+            flex: 1;
+            width: 100%;
         }
-        
+
+        /* Leaflet overrides */
+        .leaflet-container { background: #0d0d0d; }
+        .leaflet-control-zoom a {
+            background: #1a1a1a !important;
+            color: #888 !important;
+            border-color: #2a2a2a !important;
+        }
+        .leaflet-control-zoom a:hover {
+            background: #252525 !important;
+            color: #eee !important;
+        }
+        .leaflet-control-attribution {
+            background: rgba(13,13,13,0.7) !important;
+            color: #333 !important;
+            font-size: 10px;
+        }
+        .leaflet-control-attribution a { color: #444 !important; }
+
+        /* Popup */
+        .leaflet-popup-content-wrapper {
+            background: #161616;
+            border: 1px solid #2a2a2a;
+            border-radius: 8px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+            color: #f0f0f0;
+        }
+        .leaflet-popup-tip { background: #161616; }
+        .leaflet-popup-close-button { color: #555 !important; }
+        .leaflet-popup-close-button:hover { color: #aaa !important; }
+
         .popup-content h4 {
-            margin-bottom: 4px;
-            color: #1a1a2e;
-        }
-        
-        .popup-content p {
-            margin: 2px 0;
-            font-size: 0.85rem;
-            color: #555;
-        }
-        
-        .popup-content .badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 0.75rem;
+            font-size: 0.92rem;
             font-weight: 600;
-            color: white;
-            margin-top: 4px;
+            color: #fff;
+            margin-bottom: 4px;
+            line-height: 1.3;
+        }
+
+        .popup-content .location {
+            font-size: 0.78rem;
+            color: #666;
+            margin-bottom: 6px;
+        }
+
+        .popup-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 9px;
+            border-radius: 12px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            border: 1px solid transparent;
+        }
+
+        .popup-badge .badge-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        /* State zoom panel */
+        #state-zoom {
+            position: absolute;
+            bottom: 24px;
+            left: 16px;
+            z-index: 1000;
+            background: #111;
+            border: 1px solid #222;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 0.75rem;
+            color: #555;
+            max-width: 180px;
+        }
+
+        #state-zoom select {
+            margin-top: 6px;
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 5px;
+            color: #ccc;
+            font-size: 0.75rem;
+            padding: 5px 8px;
+            width: 100%;
+            outline: none;
+            cursor: pointer;
+        }
+
+        #state-zoom select:focus { border-color: #00e5ff44; }
+
+        /* No results overlay */
+        #no-results {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 900;
+            color: #444;
+            font-size: 0.9rem;
+            pointer-events: none;
+            text-align: center;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .toolbar { flex-wrap: wrap; height: auto; padding: 10px 16px; gap: 8px; }
+            #search { width: 160px; }
+            .header h1 { font-size: 0.85rem; }
+            #state-zoom { display: none; }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>🥎 College Softball Programs — Continental US</h1>
-        <span class="count" id="visible-count">Loading...</span>
-    </div>
-    <div id="map"></div>
-    
-    <div class="filter-panel">
-        <h3>🔍 Search</h3>
-        <input type="text" id="search" placeholder="School name, state, conference...">
-    </div>
 
-    <div class="legend" id="legend"></div>
+<!-- HEADER -->
+<div class="header">
+    <div class="header-left">
+        <div>
+            <div class="header h1" style="font-size:1rem;font-weight:600;letter-spacing:0.02em;color:#fff;">
+                Collegiate Softball Opportunity Map
+            </div>
+            <div class="subtitle">Continental United States</div>
+        </div>
+    </div>
+    <div class="header-right">
+        <div class="program-count">
+            <span id="visible-count">—</span> of <span id="total-count" style="color:#555">—</span> programs
+        </div>
+    </div>
+</div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        // Initialize map centered on continental US
-        const map = L.map('map', {
-            center: [39.5, -98.35],
-            zoom: 4,
-            minZoom: 3,
-            maxZoom: 18
+<!-- TOOLBAR -->
+<div class="toolbar">
+    <div class="search-wrap">
+        <span class="search-icon">⌕</span>
+        <input type="text" id="search" placeholder="School, city, state, conference…" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="divider"></div>
+    <span class="filter-label">Division</span>
+    <div class="filters">
+        <button class="filter-btn active d1" data-key="d1">
+            <span class="dot" style="background:#00e5ff;box-shadow:0 0 5px #00e5ff88"></span>
+            NCAA D1 <span class="pill-count" id="cnt-d1"></span>
+        </button>
+        <button class="filter-btn active d2" data-key="d2">
+            <span class="dot" style="background:#b388ff;box-shadow:0 0 5px #b388ff88"></span>
+            NCAA D2 <span class="pill-count" id="cnt-d2"></span>
+        </button>
+        <button class="filter-btn active d3" data-key="d3">
+            <span class="dot" style="background:#69ff47;box-shadow:0 0 5px #69ff4788"></span>
+            NCAA D3 <span class="pill-count" id="cnt-d3"></span>
+        </button>
+        <button class="filter-btn active other" data-key="other">
+            <span class="dot" style="background:#ff6680;box-shadow:0 0 5px #ff668088"></span>
+            Other <span class="pill-count" id="cnt-other"></span>
+        </button>
+    </div>
+    <div class="divider"></div>
+    <button class="ctrl-btn" id="btn-all">All</button>
+    <button class="ctrl-btn" id="btn-none">None</button>
+</div>
+
+<!-- MAP -->
+<div id="map"></div>
+<div id="no-results">No programs match your search.</div>
+
+<!-- STATE ZOOM -->
+<div id="state-zoom">
+    <div style="margin-bottom:2px;color:#666;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.05em">Zoom to State</div>
+    <select id="state-select">
+        <option value="">— Select State —</option>
+    </select>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────────────────
+
+const CATEGORY_CONFIG = {
+    d1:    { color: '#00e5ff', glow: '#00e5ff',  label: 'NCAA D1',  radius: 5.5 },
+    d2:    { color: '#b388ff', glow: '#b388ff',  label: 'NCAA D2',  radius: 5   },
+    d3:    { color: '#69ff47', glow: '#69ff47',  label: 'NCAA D3',  radius: 5   },
+    other: { color: '#ff6680', glow: '#ff6680',  label: 'Other',    radius: 4.5 }
+};
+
+function getCategory(props) {
+    if (props.association === 'NCAA') {
+        if (props.division === 'Division I')   return 'd1';
+        if (props.division === 'Division II')  return 'd2';
+        if (props.division === 'Division III') return 'd3';
+    }
+    return 'other';
+}
+
+function getCategoryLabel(props) {
+    const assoc = props.association || '';
+    const div   = props.division   || '';
+    if (assoc === 'NCAA') return `NCAA ${div}`;
+    if (div && div !== assoc) return `${assoc} ${div}`;
+    return assoc || 'Unknown';
+}
+
+// ── STATE BOUNDING BOXES ────────────────────────────────────────────────────
+const STATE_BOUNDS = {
+    AL:[[30.14,-88.47],[35.00,-84.89]], AZ:[[31.33,-114.82],[37.00,-109.04]],
+    AR:[[33.00,-94.62],[36.50,-89.64]], CA:[[32.53,-124.41],[42.01,-114.13]],
+    CO:[[36.99,-109.06],[41.00,-102.04]], CT:[[40.95,-73.73],[42.05,-71.78]],
+    DE:[[38.45,-75.79],[39.84,-75.05]], FL:[[24.40,-87.63],[31.00,-80.03]],
+    GA:[[30.35,-85.61],[35.00,-80.84]], ID:[[41.99,-117.24],[49.00,-111.04]],
+    IL:[[36.97,-91.51],[42.51,-87.50]], IN:[[37.77,-88.10],[41.76,-84.78]],
+    IA:[[40.37,-96.64],[43.50,-90.14]], KS:[[36.99,-102.05],[40.00,-94.59]],
+    KY:[[36.49,-89.57],[39.15,-81.96]], LA:[[28.93,-94.04],[33.02,-88.82]],
+    ME:[[43.06,-71.08],[47.46,-66.95]], MD:[[37.91,-79.49],[39.72,-75.05]],
+    MA:[[41.24,-73.50],[42.89,-69.93]], MI:[[41.70,-90.42],[48.19],[−82.12]],
+    MN:[[43.50,-97.24],[49.38,-89.49]], MS:[[30.17,-91.65],[34.99,-88.10]],
+    MO:[[35.99,-95.77],[40.61,-89.10]], MT:[[44.36,-116.05],[49.00],[−104.04]],
+    NE:[[39.99,-104.05],[43.00,-95.31]], NV:[[35.00,-120.00],[42.00,-114.04]],
+    NH:[[42.70,-72.56],[45.31,-70.61]], NJ:[[38.93,-75.56],[41.36,-73.89]],
+    NM:[[31.33,-109.05],[37.00,-103.00]], NY:[[40.50,-79.76],[45.02,-71.86]],
+    NC:[[33.84,-84.32],[36.59],[−75.46]], ND:[[45.94,-104.05],[49.00,-96.55]],
+    OH:[[38.40,-84.82],[41.98,-80.52]], OK:[[33.62,-103.00],[37.00,-94.43]],
+    OR:[[41.99,-124.57],[46.26,-116.46]], PA:[[39.72,-80.52],[42.27,-74.69]],
+    RI:[[41.15,-71.86],[42.02,-71.12]], SC:[[32.04,-83.35],[35.22,-78.54]],
+    SD:[[42.48,-104.06],[45.95,-96.44]], TN:[[34.98,-90.31],[36.68,-81.65]],
+    TX:[[25.84,-106.65],[36.50,-93.51]], UT:[[36.99,-114.05],[42.00,-109.04]],
+    VT:[[42.73,-73.44],[45.02,-71.50]], VA:[[36.54,-83.68],[39.47,-75.24]],
+    WA:[[45.54,-124.76],[49.00,-116.92]], WV:[[37.20,-82.64],[40.64,-77.72]],
+    WI:[[42.49,-92.89],[47.31,-86.25]], WY:[[40.99,-111.06],[45.01,-104.05]]
+};
+
+const STATE_NAMES = {
+    AL:'Alabama', AZ:'Arizona', AR:'Arkansas', CA:'California', CO:'Colorado',
+    CT:'Connecticut', DE:'Delaware', FL:'Florida', GA:'Georgia', ID:'Idaho',
+    IL:'Illinois', IN:'Indiana', IA:'Iowa', KS:'Kansas', KY:'Kentucky',
+    LA:'Louisiana', ME:'Maine', MD:'Maryland', MA:'Massachusetts', MI:'Michigan',
+    MN:'Minnesota', MS:'Mississippi', MO:'Missouri', MT:'Montana', NE:'Nebraska',
+    NV:'Nevada', NH:'New Hampshire', NJ:'New Jersey', NM:'New Mexico', NY:'New York',
+    NC:'North Carolina', ND:'North Dakota', OH:'Ohio', OK:'Oklahoma', OR:'Oregon',
+    PA:'Pennsylvania', RI:'Rhode Island', SC:'South Carolina', SD:'South Dakota',
+    TN:'Tennessee', TX:'Texas', UT:'Utah', VT:'Vermont', VA:'Virginia',
+    WA:'Washington', WV:'West Virginia', WI:'Wisconsin', WY:'Wyoming'
+};
+
+// ── MAP INIT ─────────────────────────────────────────────────────────────────
+
+const map = L.map('map', {
+    center: [38.5, -96.5],
+    zoom: 4,
+    minZoom: 3,
+    maxZoom: 18,
+    zoomControl: true
+});
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 20
+}).addTo(map);
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+
+let allMarkers  = [];
+let activeKeys  = new Set(['d1','d2','d3','other']);
+let searchTerm  = '';
+let counts      = { d1:0, d2:0, d3:0, other:0 };
+
+// ── LOAD DATA ────────────────────────────────────────────────────────────────
+
+fetch('data.geojson')
+    .then(r => r.json())
+    .then(data => {
+        const statesFound = new Set();
+
+        data.features.forEach(feature => {
+            const props  = feature.properties;
+            const coords = feature.geometry.coordinates; // [lng, lat]
+            const cat    = getCategory(props);
+            const cfg    = CATEGORY_CONFIG[cat];
+
+            counts[cat]++;
+            if (props.state) statesFound.add(props.state);
+
+            const marker = L.circleMarker([coords[1], coords[0]], {
+                radius:      cfg.radius,
+                fillColor:   cfg.color,
+                color:       '#000',
+                weight:      0.5,
+                opacity:     1,
+                fillOpacity: 0.88
+            });
+
+            const badgeBg    = cfg.color + '18';
+            const badgeBorder = cfg.color + '55';
+            const catLabel   = getCategoryLabel(props);
+
+            const popup = `
+                <div class="popup-content">
+                    <h4>${props.name}</h4>
+                    <div class="location">${props.city ? props.city + ', ' : ''}${props.state || ''}</div>
+                    <span class="popup-badge" style="background:${badgeBg};border-color:${badgeBorder};color:${cfg.color}">
+                        <span class="badge-dot" style="background:${cfg.color}"></span>
+                        ${catLabel}
+                    </span>
+                    ${props.conference ? `<div style="margin-top:6px;font-size:0.72rem;color:#555">${props.conference}</div>` : ''}
+                </div>
+            `;
+
+            marker.bindPopup(popup, { maxWidth: 240 });
+
+            marker._meta = {
+                cat,
+                name:       (props.name       || '').toLowerCase(),
+                city:       (props.city        || '').toLowerCase(),
+                state:      (props.state       || '').toLowerCase(),
+                stateCode:  (props.state       || '').toUpperCase(),
+                conference: (props.conference  || '').toLowerCase()
+            };
+
+            marker.addTo(map);
+            allMarkers.push(marker);
         });
 
-        // Add tile layer (CartoDB Positron for clean look)
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
-            subdomains: 'abcd',
-            maxZoom: 20
-        }).addTo(map);
-
-        // Color mapping
-        const colors = {
-            'NCAA|Division I': '#e41a1c',
-            'NCAA|Division II': '#377eb8',
-            'NCAA|Division III': '#4daf4a',
-            'NAIA|NAIA': '#984ea3',
-            'NJCAA|Division I': '#ff7f00',
-            'NJCAA|Division II': '#d4a017',
-            'NJCAA|Division III': '#a65628',
-            'NWAC|NWAC': '#f781bf',
-            '3C2A|3C2A': '#999999',
-            'USCAA|USCAA': '#66c2a5'
-        };
-
-        const labels = {
-            'NCAA|Division I': 'NCAA D1',
-            'NCAA|Division II': 'NCAA D2',
-            'NCAA|Division III': 'NCAA D3',
-            'NAIA|NAIA': 'NAIA',
-            'NJCAA|Division I': 'NJCAA D1',
-            'NJCAA|Division II': 'NJCAA D2',
-            'NJCAA|Division III': 'NJCAA D3',
-            'NWAC|NWAC': 'NWAC',
-            '3C2A|3C2A': 'CCCAA',
-            'USCAA|USCAA': 'USCAA'
-        };
-
-        let allMarkers = [];
-        let activeFilters = new Set(Object.keys(colors));
-        let searchTerm = '';
-
-        // Load data
-        fetch('data.geojson')
-            .then(r => r.json())
-            .then(data => {
-                const counts = {};
-                
-                data.features.forEach(feature => {
-                    const props = feature.properties;
-                    const coords = feature.geometry.coordinates;
-                    const key = `${props.association}|${props.division}`;
-                    const color = colors[key] || '#333';
-                    
-                    counts[key] = (counts[key] || 0) + 1;
-
-                    const marker = L.circleMarker([coords[1], coords[0]], {
-                        radius: 5,
-                        fillColor: color,
-                        color: '#fff',
-                        weight: 1,
-                        opacity: 1,
-                        fillOpacity: 0.8
-                    });
-
-                    const popup = `
-                        <div class="popup-content">
-                            <h4>${props.name}</h4>
-                            <p>${props.city ? props.city + ', ' : ''}${props.state}</p>
-                            <p>${props.conference || ''}</p>
-                            <span class="badge" style="background:${color}">${labels[key] || key}</span>
-                        </div>
-                    `;
-                    marker.bindPopup(popup);
-                    
-                    marker._data = {
-                        key: key,
-                        name: props.name.toLowerCase(),
-                        state: (props.state || '').toLowerCase(),
-                        conference: (props.conference || '').toLowerCase(),
-                        city: (props.city || '').toLowerCase()
-                    };
-
-                    allMarkers.push(marker);
-                    marker.addTo(map);
-                });
-
-                buildLegend(counts);
-                updateCount();
-            });
-
-        function buildLegend(counts) {
-            const legend = document.getElementById('legend');
-            let html = '<h3>Associations</h3>';
-            
-            const order = [
-                'NCAA|Division I', 'NCAA|Division II', 'NCAA|Division III',
-                'NAIA|NAIA', 'NJCAA|Division I', 'NJCAA|Division II', 'NJCAA|Division III',
-                'NWAC|NWAC', '3C2A|3C2A', 'USCAA|USCAA'
-            ];
-
-            order.forEach(key => {
-                const count = counts[key] || 0;
-                const color = colors[key];
-                const label = labels[key];
-                html += `
-                    <div class="legend-item" data-key="${key}" onclick="toggleFilter('${key}')">
-                        <div class="legend-dot" style="background:${color}"></div>
-                        <span class="legend-label">${label}</span>
-                        <span class="legend-count">${count}</span>
-                    </div>
-                `;
-            });
-
-            legend.innerHTML = html;
-        }
-
-        function toggleFilter(key) {
-            if (activeFilters.has(key)) {
-                activeFilters.delete(key);
-            } else {
-                activeFilters.add(key);
-            }
-            
-            // Update legend styling
-            document.querySelectorAll('.legend-item').forEach(el => {
-                if (activeFilters.has(el.dataset.key)) {
-                    el.classList.remove('disabled');
-                } else {
-                    el.classList.add('disabled');
-                }
-            });
-
-            applyFilters();
-        }
-
-        function applyFilters() {
-            allMarkers.forEach(marker => {
-                const d = marker._data;
-                const matchesFilter = activeFilters.has(d.key);
-                const matchesSearch = !searchTerm || 
-                    d.name.includes(searchTerm) || 
-                    d.state.includes(searchTerm) || 
-                    d.conference.includes(searchTerm) ||
-                    d.city.includes(searchTerm);
-
-                if (matchesFilter && matchesSearch) {
-                    if (!map.hasLayer(marker)) marker.addTo(map);
-                } else {
-                    if (map.hasLayer(marker)) map.removeLayer(marker);
-                }
-            });
-            updateCount();
-        }
-
-        function updateCount() {
-            const visible = allMarkers.filter(m => map.hasLayer(m)).length;
-            document.getElementById('visible-count').textContent = 
-                `Showing ${visible.toLocaleString()} of ${allMarkers.length.toLocaleString()} programs`;
-        }
-
-        // Search functionality
-        document.getElementById('search').addEventListener('input', (e) => {
-            searchTerm = e.target.value.toLowerCase().trim();
-            applyFilters();
+        // Update pill counts
+        Object.keys(counts).forEach(k => {
+            const el = document.getElementById('cnt-' + k);
+            if (el) el.textContent = counts[k].toLocaleString();
         });
-    </script>
+
+        document.getElementById('total-count').textContent = allMarkers.length.toLocaleString();
+        refreshCount();
+
+        // Populate state dropdown
+        buildStateDropdown([...statesFound].sort());
+    });
+
+// ── FILTERING ────────────────────────────────────────────────────────────────
+
+function applyFilters() {
+    let visible = 0;
+    allMarkers.forEach(marker => {
+        const m = marker._meta;
+        const catOk = activeKeys.has(m.cat);
+        const searchOk = !searchTerm ||
+            m.name.includes(searchTerm) ||
+            m.city.includes(searchTerm) ||
+            m.state.includes(searchTerm) ||
+            m.stateCode.toLowerCase().includes(searchTerm) ||
+            m.conference.includes(searchTerm);
+
+        if (catOk && searchOk) {
+            if (!map.hasLayer(marker)) marker.addTo(map);
+            visible++;
+        } else {
+            if (map.hasLayer(marker)) map.removeLayer(marker);
+        }
+    });
+
+    document.getElementById('visible-count').textContent = visible.toLocaleString();
+    document.getElementById('no-results').style.display = (visible === 0) ? 'block' : 'none';
+}
+
+function refreshCount() {
+    const visible = allMarkers.filter(m => map.hasLayer(m)).length;
+    document.getElementById('visible-count').textContent = visible.toLocaleString();
+}
+
+// ── FILTER BUTTONS ───────────────────────────────────────────────────────────
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const key = btn.dataset.key;
+        if (activeKeys.has(key)) {
+            activeKeys.delete(key);
+            btn.classList.remove('active');
+            btn.classList.add('inactive');
+        } else {
+            activeKeys.add(key);
+            btn.classList.add('active');
+            btn.classList.remove('inactive');
+        }
+        applyFilters();
+    });
+});
+
+document.getElementById('btn-all').addEventListener('click', () => {
+    activeKeys = new Set(['d1','d2','d3','other']);
+    document.querySelectorAll('.filter-btn').forEach(b => {
+        b.classList.add('active');
+        b.classList.remove('inactive');
+    });
+    applyFilters();
+});
+
+document.getElementById('btn-none').addEventListener('click', () => {
+    activeKeys = new Set();
+    document.querySelectorAll('.filter-btn').forEach(b => {
+        b.classList.remove('active');
+        b.classList.add('inactive');
+    });
+    applyFilters();
+});
+
+// ── SEARCH ───────────────────────────────────────────────────────────────────
+
+document.getElementById('search').addEventListener('input', e => {
+    searchTerm = e.target.value.toLowerCase().trim();
+    applyFilters();
+});
+
+// ── STATE DROPDOWN ───────────────────────────────────────────────────────────
+
+function buildStateDropdown(states) {
+    const sel = document.getElementById('state-select');
+    states.forEach(code => {
+        const opt = document.createElement('option');
+        opt.value = code;
+        opt.textContent = STATE_NAMES[code] || code;
+        sel.appendChild(opt);
+    });
+}
+
+document.getElementById('state-select').addEventListener('change', e => {
+    const code = e.target.value;
+    if (!code) return;
+
+    // Try bounding box first
+    if (STATE_BOUNDS[code]) {
+        const b = STATE_BOUNDS[code];
+        // Filter out any malformed entries
+        if (Array.isArray(b[0]) && Array.isArray(b[1]) && b[0].length === 2 && b[1].length === 2) {
+            map.fitBounds(L.latLngBounds(b[0], b[1]), { padding: [40, 40] });
+            return;
+        }
+    }
+
+    // Fallback: compute from markers in that state
+    const pts = allMarkers
+        .filter(m => m._meta.stateCode === code)
+        .map(m => m.getLatLng());
+
+    if (pts.length > 0) {
+        const group = L.featureGroup(pts.map(p => L.marker(p)));
+        map.fitBounds(group.getBounds().pad(0.2));
+    }
+});
+</script>
 </body>
 </html>
