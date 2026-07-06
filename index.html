@@ -131,13 +131,16 @@
         .toolbar {
             background: #111111;
             border-bottom: 1px solid #1e1e1e;
-            padding: 0 24px;
-            height: 52px;
+            padding: 6px 24px;
+            min-height: 52px;
+            height: auto;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 8px;
             flex-shrink: 0;
+            flex-wrap: wrap;
             z-index: 999;
+            overflow-x: visible;
         }
 
         /* Search */
@@ -419,6 +422,20 @@
         }
 
         /* Responsive */
+        @media (max-width: 1024px) {
+            /* Toolbar wraps on narrower screens */
+            .toolbar {
+                padding: 8px 16px;
+                gap: 6px;
+            }
+
+            /* Search shrinks */
+            #search { width: 160px; }
+
+            /* Climate controls inline */
+            #climate-controls { flex-shrink: 0; }
+        }
+
         @media (max-width: 768px) {
             /* Header stacks vertically */
             .header {
@@ -433,25 +450,22 @@
             .header-right { width: 100%; }
             .program-count { font-size: 0.72rem; }
 
-            /* Toolbar: two rows */
+            /* Toolbar stacks into rows */
             .toolbar {
-                flex-wrap: wrap;
-                height: auto;
                 padding: 8px 12px;
-                gap: 8px;
+                gap: 6px;
             }
 
-            /* Search full width, first row */
+            /* Search takes full width on its own row */
             .search-wrap { width: 100%; order: 1; }
             #search { width: 100%; }
 
-            /* Hide dividers and filter label */
+            /* Hide dividers and filter labels */
             .divider { display: none; }
             .filter-label { display: none; }
 
-            /* Filter pills scroll horizontally, second row */
+            /* Division filters — scroll horizontally */
             .filters {
-                order: 2;
                 width: 100%;
                 overflow-x: auto;
                 flex-wrap: nowrap;
@@ -459,8 +473,22 @@
                 padding-bottom: 2px;
             }
 
-            /* All/None buttons on same row as filters */
-            #btn-all, #btn-none { order: 3; flex-shrink: 0; }
+            /* Climate band filters — also scroll horizontally */
+            #climate-band-filters {
+                width: 100%;
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: 2px;
+                order: 4;
+            }
+
+            /* All/None buttons */
+            #btn-all, #btn-none { flex-shrink: 0; }
+
+            /* Climate toggle + controls */
+            #btn-climate { order: 3; }
+            #climate-controls { order: 3; flex-shrink: 0; }
 
             /* Slightly smaller pills */
             .filter-btn {
@@ -469,7 +497,7 @@
                 flex-shrink: 0;
             }
 
-            /* Hide state zoom */
+            /* Hide state zoom on mobile */
             #state-zoom { display: none; }
         }
     </style>
