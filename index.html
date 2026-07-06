@@ -245,6 +245,14 @@
             opacity: 0.38;
         }
 
+        /* Toolbar groups — wrap as atomic units, never split mid-group */
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
         /* Climate band filter pills */
         #cb-green.active  { border-color: #37b358; box-shadow: 0 0 8px #37b35822; color: #fff; }
         #cb-yellow.active { border-color: #d4c020; box-shadow: 0 0 8px #d4c02022; color: #fff; }
@@ -560,34 +568,47 @@
     </div>
     <div class="divider"></div>
     <button class="ctrl-btn" id="btn-all">All</button>
-    <button class="ctrl-btn" id="btn-all">All</button>
     <button class="ctrl-btn" id="btn-none">None</button>
     <div class="divider"></div>
-    <button class="filter-btn" id="btn-climate">
-        <span style="width:8px;height:8px;border-radius:50%;background:linear-gradient(135deg,#1a8c3a,#f5c400,#c0392b);flex-shrink:0;display:inline-block"></span>
-        Climate Layer
-    </button>
-    <div id="climate-controls">
-        <span class="opacity-label">Opacity</span>
-        <input type="range" id="climate-opacity" min="10" max="80" value="45" step="5">
-        <span class="opacity-label" id="opacity-val">45%</span>
+    <!-- Climate layer toggle + opacity — wrap together -->
+    <div class="toolbar-group">
+        <button class="filter-btn" id="btn-climate">
+            <span style="width:8px;height:8px;border-radius:50%;background:linear-gradient(135deg,#1a8c3a,#f5c400,#c0392b);flex-shrink:0;display:inline-block"></span>
+            Climate Layer
+        </button>
+        <div id="climate-controls">
+            <span class="opacity-label">Opacity</span>
+            <input type="range" id="climate-opacity" min="10" max="80" value="45" step="5">
+            <span class="opacity-label" id="opacity-val">45%</span>
+        </div>
     </div>
     <div class="divider"></div>
-    <span class="filter-label">Climate Zone</span>
-    <div class="filters" id="climate-band-filters">
-        <button class="filter-btn" id="cb-green"  data-band="green">
-            <span class="dot" style="background:#37b358"></span> Elite
-        </button>
-        <button class="filter-btn" id="cb-yellow" data-band="yellow">
-            <span class="dot" style="background:#d4c020"></span> Good
-        </button>
-        <button class="filter-btn" id="cb-orange" data-band="orange">
-            <span class="dot" style="background:#eb7015"></span> Average
-        </button>
-        <button class="filter-btn" id="cb-red"    data-band="red">
-            <span class="dot" style="background:#a01010"></span> Challenging
-        </button>
-        <button class="ctrl-btn" id="cb-clear">All Zones</button>
+    <!-- Climate zone filters — label + pills wrap together as one group -->
+    <div class="toolbar-group">
+        <span class="filter-label">Climate Zone</span>
+        <div class="filters" id="climate-band-filters">
+            <button class="filter-btn" id="cb-green"  data-band="green">
+                <span class="dot" style="background:#37b358"></span> Elite
+            </button>
+            <button class="filter-btn" id="cb-yellow" data-band="yellow">
+                <span class="dot" style="background:#d4c020"></span> Good
+            </button>
+            <button class="filter-btn" id="cb-orange" data-band="orange">
+                <span class="dot" style="background:#eb7015"></span> Average
+            </button>
+            <button class="filter-btn" id="cb-red"    data-band="red">
+                <span class="dot" style="background:#a01010"></span> Challenging
+            </button>
+            <button class="ctrl-btn" id="cb-clear">All Zones</button>
+        </div>
+    </div>
+    <div class="divider"></div>
+    <!-- Zoom controls -->
+    <div class="toolbar-group">
+        <span class="opacity-label">Zoom</span>
+        <button class="ctrl-btn" id="btn-zoom-out">−</button>
+        <input type="range" id="zoom-slider" min="3" max="10" value="4" step="1" style="width:70px">
+        <button class="ctrl-btn" id="btn-zoom-in">+</button>
     </div>
 </div>
 
@@ -693,6 +714,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
 let allMarkers  = [];
 let activeKeys  = new Set(['d1','d2','d3','other']);
 let searchTerm  = '';
+let activeBands = new Set(); // empty = show all bands
 let counts      = { d1:0, d2:0, d3:0, other:0 };
 
 // ── LOAD DATA ────────────────────────────────────────────────────────────────
@@ -767,15 +789,12 @@ fetch('data.geojson')
 
 // ── FILTERING ────────────────────────────────────────────────────────────────
 
-// Active climate band filter — null means show all
-let activeBand = null;
-
 function applyFilters() {
     let visible = 0;
     allMarkers.forEach(marker => {
         const m = marker._meta;
         const catOk    = activeKeys.has(m.cat);
-        const bandOk   = !activeBand || m.climateBand === activeBand;
+        const bandOk   = activeBands.size === 0 || activeBands.has(m.climateBand);
         const searchOk = !searchTerm ||
             m.name.includes(searchTerm) ||
             m.city.includes(searchTerm) ||
@@ -1026,37 +1045,56 @@ opacitySlider.addEventListener('input', () => {
     if (climateLayer) climateLayer.setOpacity(val / 100);
 });
 
-// ── CLIMATE BAND FILTERS ──────────────────────────────────────────────────
+// ── ZOOM CONTROLS ────────────────────────────────────────────────────────
+const zoomSlider = document.getElementById('zoom-slider');
+
+map.on('zoomend', () => {
+    zoomSlider.value = map.getZoom();
+});
+
+zoomSlider.addEventListener('input', () => {
+    map.setZoom(parseInt(zoomSlider.value));
+});
+
+document.getElementById('btn-zoom-in').addEventListener('click', () => {
+    map.zoomIn();
+});
+
+document.getElementById('btn-zoom-out').addEventListener('click', () => {
+    map.zoomOut();
+});
+
+// ── CLIMATE BAND FILTERS (multi-select, same as division filters) ─────────
+function updateBandUI() {
+    document.querySelectorAll('#climate-band-filters [data-band]').forEach(b => {
+        if (activeBands.size === 0) {
+            b.classList.remove('active', 'inactive');
+        } else if (activeBands.has(b.dataset.band)) {
+            b.classList.add('active');
+            b.classList.remove('inactive');
+        } else {
+            b.classList.remove('active');
+            b.classList.add('inactive');
+        }
+    });
+}
+
 document.querySelectorAll('#climate-band-filters [data-band]').forEach(btn => {
     btn.addEventListener('click', () => {
         const band = btn.dataset.band;
-        if (activeBand === band) {
-            // Deselect — show all zones
-            activeBand = null;
-            document.querySelectorAll('#climate-band-filters [data-band]').forEach(b => {
-                b.classList.remove('active', 'inactive');
-            });
+        if (activeBands.has(band)) {
+            activeBands.delete(band);
         } else {
-            activeBand = band;
-            document.querySelectorAll('#climate-band-filters [data-band]').forEach(b => {
-                if (b.dataset.band === band) {
-                    b.classList.add('active');
-                    b.classList.remove('inactive');
-                } else {
-                    b.classList.remove('active');
-                    b.classList.add('inactive');
-                }
-            });
+            activeBands.add(band);
         }
+        updateBandUI();
         applyFilters();
     });
 });
 
 document.getElementById('cb-clear').addEventListener('click', () => {
-    activeBand = null;
-    document.querySelectorAll('#climate-band-filters [data-band]').forEach(b => {
-        b.classList.remove('active', 'inactive');
-    });
+    activeBands.clear();
+    updateBandUI();
     applyFilters();
 });
 
