@@ -371,9 +371,56 @@
 
         /* Responsive */
         @media (max-width: 768px) {
-            .toolbar { flex-wrap: wrap; height: auto; padding: 10px 16px; gap: 8px; }
-            #search { width: 160px; }
-            .header h1 { font-size: 0.85rem; }
+            /* Header stacks vertically */
+            .header {
+                height: auto;
+                padding: 10px 16px;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 2px;
+            }
+            .header h1 { font-size: 0.88rem; }
+            .subtitle { font-size: 0.68rem; }
+            .header-right { width: 100%; }
+            .program-count { font-size: 0.72rem; }
+
+            /* Toolbar: two rows */
+            .toolbar {
+                flex-wrap: wrap;
+                height: auto;
+                padding: 8px 12px;
+                gap: 8px;
+            }
+
+            /* Search full width, first row */
+            .search-wrap { width: 100%; order: 1; }
+            #search { width: 100%; }
+
+            /* Hide dividers and filter label */
+            .divider { display: none; }
+            .filter-label { display: none; }
+
+            /* Filter pills scroll horizontally, second row */
+            .filters {
+                order: 2;
+                width: 100%;
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: 2px;
+            }
+
+            /* All/None buttons on same row as filters */
+            #btn-all, #btn-none { order: 3; flex-shrink: 0; }
+
+            /* Slightly smaller pills */
+            .filter-btn {
+                font-size: 0.73rem;
+                padding: 5px 10px;
+                flex-shrink: 0;
+            }
+
+            /* Hide state zoom */
             #state-zoom { display: none; }
         }
     </style>
