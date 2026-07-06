@@ -242,6 +242,49 @@
             opacity: 0.38;
         }
 
+        /* Climate layer toggle */
+        #btn-climate {
+            background: #1a1a1a;
+            border-color: #2a2a2a;
+            color: #888;
+            transition: all 0.18s ease;
+        }
+        #btn-climate.active {
+            background: #1e1e1e;
+            border-color: #ff9d00;
+            color: #ffffff;
+            box-shadow: 0 0 8px #ff9d0022;
+        }
+
+        /* Climate opacity slider */
+        #climate-controls {
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+        #climate-controls.visible { display: flex; }
+        #climate-opacity {
+            -webkit-appearance: none;
+            width: 80px;
+            height: 3px;
+            border-radius: 2px;
+            background: #333;
+            outline: none;
+            cursor: pointer;
+        }
+        #climate-opacity::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ff9d00;
+            cursor: pointer;
+        }
+        .opacity-label {
+            font-size: 0.7rem;
+            color: #555;
+        }
+
         /* Select All / Clear */
         .ctrl-btn {
             font-size: 0.72rem;
@@ -484,6 +527,16 @@
     <div class="divider"></div>
     <button class="ctrl-btn" id="btn-all">All</button>
     <button class="ctrl-btn" id="btn-none">None</button>
+    <div class="divider"></div>
+    <button class="filter-btn" id="btn-climate">
+        <span style="width:8px;height:8px;border-radius:50%;background:linear-gradient(135deg,#1a8c3a,#f5c400,#c0392b);flex-shrink:0;display:inline-block"></span>
+        Climate Layer
+    </button>
+    <div id="climate-controls">
+        <span class="opacity-label">Opacity</span>
+        <input type="range" id="climate-opacity" min="10" max="80" value="45" step="5">
+        <span class="opacity-label" id="opacity-val">45%</span>
+    </div>
 </div>
 
 <!-- MAP -->
@@ -768,6 +821,53 @@ document.getElementById('state-select').addEventListener('change', e => {
         const group = L.featureGroup(pts.map(p => L.marker(p)));
         map.fitBounds(group.getBounds().pad(0.2));
     }
+});
+
+// ── CLIMATE LAYER ────────────────────────────────────────────────────────────
+// Bounds: continental US
+const CLIMATE_BOUNDS = [[24.0, -125.0], [50.5, -66.0]];
+let climateLayer = null;
+let climateVisible = false;
+
+const btnClimate   = document.getElementById('btn-climate');
+const climateCtrl  = document.getElementById('climate-controls');
+const opacitySlider = document.getElementById('climate-opacity');
+const opacityVal   = document.getElementById('opacity-val');
+
+function getOpacity() {
+    return parseInt(opacitySlider.value) / 100;
+}
+
+function showClimate() {
+    if (!climateLayer) {
+        climateLayer = L.imageOverlay('climate_overlay.svg', CLIMATE_BOUNDS, {
+            opacity: getOpacity(),
+            interactive: false,
+            zIndex: 200
+        }).addTo(map);
+    } else {
+        climateLayer.addTo(map);
+        climateLayer.setOpacity(getOpacity());
+    }
+    climateVisible = true;
+    btnClimate.classList.add('active');
+    climateCtrl.classList.add('visible');
+}
+
+function hideClimate() {
+    if (climateLayer) map.removeLayer(climateLayer);
+    climateVisible = false;
+    btnClimate.classList.remove('active');
+    climateCtrl.classList.remove('visible');
+}
+
+btnClimate.addEventListener('click', () => {
+    climateVisible ? hideClimate() : showClimate();
+});
+
+opacitySlider.addEventListener('input', () => {
+    opacityVal.textContent = opacitySlider.value + '%';
+    if (climateLayer) climateLayer.setOpacity(getOpacity());
 });
 </script>
 
