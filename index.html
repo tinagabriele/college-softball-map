@@ -242,6 +242,12 @@
             opacity: 0.38;
         }
 
+        /* Climate band filter pills */
+        #cb-green.active  { border-color: #37b358; box-shadow: 0 0 8px #37b35822; color: #fff; }
+        #cb-yellow.active { border-color: #d4c020; box-shadow: 0 0 8px #d4c02022; color: #fff; }
+        #cb-orange.active { border-color: #eb7015; box-shadow: 0 0 8px #eb701522; color: #fff; }
+        #cb-red.active    { border-color: #a01010; box-shadow: 0 0 8px #a0101022; color: #fff; }
+
         /* Climate layer toggle */
         #btn-climate {
             background: #1a1a1a;
@@ -526,6 +532,7 @@
     </div>
     <div class="divider"></div>
     <button class="ctrl-btn" id="btn-all">All</button>
+    <button class="ctrl-btn" id="btn-all">All</button>
     <button class="ctrl-btn" id="btn-none">None</button>
     <div class="divider"></div>
     <button class="filter-btn" id="btn-climate">
@@ -536,6 +543,23 @@
         <span class="opacity-label">Opacity</span>
         <input type="range" id="climate-opacity" min="10" max="80" value="45" step="5">
         <span class="opacity-label" id="opacity-val">45%</span>
+    </div>
+    <div class="divider"></div>
+    <span class="filter-label">Climate Zone</span>
+    <div class="filters" id="climate-band-filters">
+        <button class="filter-btn" id="cb-green"  data-band="green">
+            <span class="dot" style="background:#37b358"></span> Elite
+        </button>
+        <button class="filter-btn" id="cb-yellow" data-band="yellow">
+            <span class="dot" style="background:#d4c020"></span> Good
+        </button>
+        <button class="filter-btn" id="cb-orange" data-band="orange">
+            <span class="dot" style="background:#eb7015"></span> Average
+        </button>
+        <button class="filter-btn" id="cb-red"    data-band="red">
+            <span class="dot" style="background:#a01010"></span> Challenging
+        </button>
+        <button class="ctrl-btn" id="cb-clear">All Zones</button>
     </div>
 </div>
 
@@ -688,11 +712,12 @@ fetch('data.geojson')
 
             marker._meta = {
                 cat,
-                name:       (props.name       || '').toLowerCase(),
-                city:       (props.city        || '').toLowerCase(),
-                state:      (props.state       || '').toLowerCase(),
-                stateCode:  (props.state       || '').toUpperCase(),
-                conference: (props.conference  || '').toLowerCase()
+                name:        (props.name       || '').toLowerCase(),
+                city:        (props.city        || '').toLowerCase(),
+                state:       (props.state       || '').toLowerCase(),
+                stateCode:   (props.state       || '').toUpperCase(),
+                conference:  (props.conference  || '').toLowerCase(),
+                climateBand: (props.climate_band || 'orange')
             };
 
             marker.addTo(map);
@@ -714,11 +739,15 @@ fetch('data.geojson')
 
 // ── FILTERING ────────────────────────────────────────────────────────────────
 
+// Active climate band filter — null means show all
+let activeBand = null;
+
 function applyFilters() {
     let visible = 0;
     allMarkers.forEach(marker => {
         const m = marker._meta;
-        const catOk = activeKeys.has(m.cat);
+        const catOk    = activeKeys.has(m.cat);
+        const bandOk   = !activeBand || m.climateBand === activeBand;
         const searchOk = !searchTerm ||
             m.name.includes(searchTerm) ||
             m.city.includes(searchTerm) ||
@@ -726,7 +755,7 @@ function applyFilters() {
             m.stateCode.toLowerCase().includes(searchTerm) ||
             m.conference.includes(searchTerm);
 
-        if (catOk && searchOk) {
+        if (catOk && bandOk && searchOk) {
             if (!map.hasLayer(marker)) marker.addTo(map);
             visible++;
         } else {
@@ -967,6 +996,40 @@ opacitySlider.addEventListener('input', () => {
     const val = parseInt(opacitySlider.value);
     opacityVal.textContent = val + '%';
     if (climateLayer) climateLayer.setOpacity(val / 100);
+});
+
+// ── CLIMATE BAND FILTERS ──────────────────────────────────────────────────
+document.querySelectorAll('#climate-band-filters [data-band]').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const band = btn.dataset.band;
+        if (activeBand === band) {
+            // Deselect — show all zones
+            activeBand = null;
+            document.querySelectorAll('#climate-band-filters [data-band]').forEach(b => {
+                b.classList.remove('active', 'inactive');
+            });
+        } else {
+            activeBand = band;
+            document.querySelectorAll('#climate-band-filters [data-band]').forEach(b => {
+                if (b.dataset.band === band) {
+                    b.classList.add('active');
+                    b.classList.remove('inactive');
+                } else {
+                    b.classList.remove('active');
+                    b.classList.add('inactive');
+                }
+            });
+        }
+        applyFilters();
+    });
+});
+
+document.getElementById('cb-clear').addEventListener('click', () => {
+    activeBand = null;
+    document.querySelectorAll('#climate-band-filters [data-band]').forEach(b => {
+        b.classList.remove('active', 'inactive');
+    });
+    applyFilters();
 });
 
 </script>
