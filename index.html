@@ -6,6 +6,67 @@
     <title>Collegiate Softball Opportunity Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
+        /* ── PASSWORD GATE ── */
+        #password-gate {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #0d0d0d;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+        }
+        #password-gate h2 {
+            color: #ffffff;
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        #password-gate input {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            color: #f0f0f0;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 1rem;
+            width: 260px;
+            text-align: center;
+            outline: none;
+        }
+        #password-gate input:focus {
+            border-color: #00e5ff;
+        }
+        #password-gate button {
+            margin-top: 12px;
+            background: #00e5ff;
+            color: #000;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        #password-gate button:hover {
+            background: #00c8e0;
+        }
+        #password-gate .error-msg {
+            color: #ff6680;
+            margin-top: 14px;
+            font-size: 0.85rem;
+            min-height: 1.2em;
+        }
+        #app-content {
+            display: none;
+        }
+        #app-content.unlocked {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
@@ -13,8 +74,6 @@
             background: #0d0d0d;
             color: #f0f0f0;
             height: 100vh;
-            display: flex;
-            flex-direction: column;
             overflow: hidden;
         }
 
@@ -320,6 +379,17 @@
     </style>
 </head>
 <body>
+
+<!-- PASSWORD GATE -->
+<div id="password-gate">
+    <h2>Enter Password</h2>
+    <input type="password" id="gate-password" placeholder="Password" autocomplete="off" />
+    <button id="gate-submit">Enter</button>
+    <div class="error-msg" id="gate-error"></div>
+</div>
+
+<!-- APP CONTENT (hidden until password entered) -->
+<div id="app-content">
 
 <!-- HEADER -->
 <div class="header">
@@ -651,6 +721,34 @@ document.getElementById('state-select').addEventListener('change', e => {
         const group = L.featureGroup(pts.map(p => L.marker(p)));
         map.fitBounds(group.getBounds().pad(0.2));
     }
+});
+</script>
+
+</div><!-- end #app-content -->
+
+<script>
+// ── PASSWORD GATE ──
+const gateEl = document.getElementById('password-gate');
+const appEl = document.getElementById('app-content');
+const gateInput = document.getElementById('gate-password');
+const gateBtn = document.getElementById('gate-submit');
+const gateError = document.getElementById('gate-error');
+
+function tryUnlock() {
+    if (gateInput.value === 'iwant2play') {
+        gateEl.style.display = 'none';
+        appEl.classList.add('unlocked');
+        // Trigger map resize so tiles render correctly
+        setTimeout(() => { map.invalidateSize(); }, 100);
+    } else {
+        gateError.textContent = 'Sorry, access not granted.';
+        gateInput.value = '';
+    }
+}
+
+gateBtn.addEventListener('click', tryUnlock);
+gateInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') tryUnlock();
 });
 </script>
 </body>
