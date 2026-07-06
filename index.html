@@ -272,29 +272,7 @@
             color: #ffffff;
             box-shadow: 0 0 8px #c4b49a22;
         }
-        #terrain-controls {
-            display: none;
-            align-items: center;
-            gap: 8px;
-        }
-        #terrain-controls.visible { display: flex; }
-        #terrain-opacity {
-            -webkit-appearance: none;
-            width: 80px;
-            height: 3px;
-            border-radius: 2px;
-            background: #333;
-            outline: none;
-            cursor: pointer;
-        }
-        #terrain-opacity::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #c4b49a;
-            cursor: pointer;
-        }
+
 
         /* Climate layer toggle */
         #btn-climate {
@@ -648,11 +626,7 @@
             <span style="width:8px;height:8px;border-radius:50%;background:linear-gradient(135deg,#5a4a3a,#8a7a6a,#c4b49a);flex-shrink:0;display:inline-block"></span>
             Terrain
         </button>
-        <div id="terrain-controls">
-            <span class="opacity-label">Opacity</span>
-            <input type="range" id="terrain-opacity" min="10" max="90" value="40" step="5">
-            <span class="opacity-label" id="terrain-opacity-val">40%</span>
-        </div>
+
     </div>
     <div class="divider"></div>
     <!-- Zoom controls -->
@@ -953,40 +927,28 @@ document.getElementById('state-select').addEventListener('change', e => {
 // ── TERRAIN LAYER ────────────────────────────────────────────────────────
 // USGS National Map hillshade tiles — free, no API key, matches dark aesthetic
 const terrainTiles = L.tileLayer(
-    'https://basemap.nationalmap.gov/arcgis/rest/services/USGSShadedReliefOnly/MapServer/tile/{z}/{y}/{x}',
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Shaded_Relief/MapServer/tile/{z}/{y}/{x}',
     {
-        attribution: 'USGS National Map',
-        opacity: 0.40,
+        attribution: 'Esri, USGS',
+        opacity: 0.18,
         zIndex: 150,
-        maxZoom: 16
+        maxZoom: 13
     }
 );
 
 let terrainVisible = false;
-const btnTerrain        = document.getElementById('btn-terrain');
-const terrainCtrl       = document.getElementById('terrain-controls');
-const terrainOpacity    = document.getElementById('terrain-opacity');
-const terrainOpacityVal = document.getElementById('terrain-opacity-val');
+const btnTerrain = document.getElementById('btn-terrain');
 
 btnTerrain.addEventListener('click', () => {
     if (terrainVisible) {
         map.removeLayer(terrainTiles);
         terrainVisible = false;
         btnTerrain.classList.remove('active');
-        terrainCtrl.classList.remove('visible');
     } else {
         terrainTiles.addTo(map);
-        terrainTiles.setOpacity(parseInt(terrainOpacity.value) / 100);
         terrainVisible = true;
         btnTerrain.classList.add('active');
-        terrainCtrl.classList.add('visible');
     }
-});
-
-terrainOpacity.addEventListener('input', () => {
-    const val = parseInt(terrainOpacity.value);
-    terrainOpacityVal.textContent = val + '%';
-    terrainTiles.setOpacity(val / 100);
 });
 
 // ── CLIMATE LAYER (Canvas — lat/lon projected by Leaflet) ─────────────────
