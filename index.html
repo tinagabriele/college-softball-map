@@ -259,6 +259,79 @@
         #cb-orange.active { border-color: #eb7015; box-shadow: 0 0 8px #eb701522; color: #fff; }
         #cb-red.active    { border-color: #a01010; box-shadow: 0 0 8px #a0101022; color: #fff; }
 
+        /* Divisions layer toggle */
+        #btn-divisions {
+            background: #1a1a1a;
+            border-color: #2a2a2a;
+            color: #888;
+            transition: all 0.18s ease;
+        }
+        #btn-divisions.active {
+            background: #1e1e1e;
+            border-color: #4a9eff;
+            color: #ffffff;
+            box-shadow: 0 0 8px #4a9eff22;
+        }
+
+        /* Division popup styling */
+        .div-popup { min-width: 220px; }
+        .div-popup h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #fff;
+            margin: 0 0 2px 0;
+        }
+        .div-popup .div-sub {
+            font-size: 0.7rem;
+            color: #888;
+            margin-bottom: 10px;
+        }
+        .div-popup .div-score-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .div-popup .div-overall {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #fff;
+        }
+        .div-popup .div-rank {
+            font-size: 0.72rem;
+            color: #888;
+        }
+        .div-popup .div-bar-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 4px;
+        }
+        .div-popup .div-bar-label {
+            font-size: 0.68rem;
+            color: #888;
+            width: 80px;
+            flex-shrink: 0;
+        }
+        .div-popup .div-bar-track {
+            flex: 1;
+            height: 4px;
+            background: #2a2a2a;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .div-popup .div-bar-fill {
+            height: 100%;
+            border-radius: 2px;
+        }
+        .div-popup .div-bar-val {
+            font-size: 0.68rem;
+            color: #aaa;
+            width: 30px;
+            text-align: right;
+            flex-shrink: 0;
+        }
+
         /* Terrain layer toggle */
         #btn-terrain {
             background: #1a1a1a;
@@ -620,13 +693,20 @@
         </div>
     </div>
     <div class="divider"></div>
+    <!-- Divisions layer toggle -->
+    <div class="toolbar-group">
+        <button class="filter-btn" id="btn-divisions">
+            <span style="width:8px;height:8px;border-radius:50%;background:#4a9eff;flex-shrink:0;display:inline-block"></span>
+            Divisions
+        </button>
+    </div>
+    <div class="divider"></div>
     <!-- Terrain layer toggle -->
     <div class="toolbar-group">
         <button class="filter-btn" id="btn-terrain">
             <span style="width:8px;height:8px;border-radius:50%;background:linear-gradient(135deg,#5a4a3a,#8a7a6a,#c4b49a);flex-shrink:0;display:inline-block"></span>
             Terrain
         </button>
-
     </div>
     <div class="divider"></div>
     <!-- Zoom controls -->
@@ -921,6 +1001,100 @@ document.getElementById('state-select').addEventListener('change', e => {
     if (pts.length > 0) {
         const group = L.featureGroup(pts.map(p => L.marker(p)));
         map.fitBounds(group.getBounds().pad(0.2));
+    }
+});
+
+// ── CLIMATE DIVISIONS LAYER ───────────────────────────────────────────────
+const BAND_COLORS = {
+    green:  '#37b358',
+    yellow: '#d4c020',
+    orange: '#eb7015',
+    red:    '#a01010'
+};
+
+function divPopupHTML(p) {
+    const band     = BAND_COLORS[p.band] || '#888';
+    const vars = [
+        ['Prime Days',    p.prime,    '#00e5ff'],
+        ['Playable Days', p.playable, '#00e5ff'],
+        ['Freeze-Thaw',   p.freeze,   '#b388ff'],
+        ['Green-Up',      p.greenup,  '#69ff47'],
+        ['VPD / Drying',  p.vpd,      '#69ff47'],
+        ['Precip Days',   p.precip,   '#ff6680'],
+        ['Dew Point',     p.dewpoint, '#ff6680'],
+    ];
+    const bars = vars.map(([label, val, color]) => `
+        <div class="div-bar-row">
+            <span class="div-bar-label">${label}</span>
+            <div class="div-bar-track">
+                <div class="div-bar-fill" style="width:${val}%;background:${color}"></div>
+            </div>
+            <span class="div-bar-val">${val}</span>
+        </div>`).join('');
+
+    return `<div class="div-popup">
+        <h3>${p.name}</h3>
+        <div class="div-sub">${p.state} &nbsp;·&nbsp; Climate Division</div>
+        <div class="div-score-row">
+            <span class="div-overall" style="color:${band}">${p.score}</span>
+            <span class="div-rank">Rank #${p.rank} of ${p.total}</span>
+        </div>
+        ${bars}
+    </div>`;
+}
+
+let divisionsLayer = null;
+let divisionsVisible = false;
+const btnDivisions = document.getElementById('btn-divisions');
+
+function loadDivisions() {
+    if (divisionsLayer) {
+        divisionsLayer.addTo(map);
+        return;
+    }
+    fetch('divisions.geojson')
+        .then(r => r.json())
+        .then(data => {
+            divisionsLayer = L.geoJSON(data, {
+                style: feature => ({
+                    fillColor:   BAND_COLORS[feature.properties.band] || '#888',
+                    fillOpacity: 0,
+                    color:       '#ffffff',
+                    weight:      0,
+                    opacity:     0
+                }),
+                onEachFeature: (feature, layer) => {
+                    const p = feature.properties;
+                    layer.bindPopup(divPopupHTML(p), { maxWidth: 260 });
+                    layer.on('mouseover', function(e) {
+                        this.setStyle({ fillOpacity: 0.25, weight: 1, opacity: 0.6 });
+                        this.bringToFront();
+                    });
+                    layer.on('mouseout', function(e) {
+                        if (!this._popup || !this._popup.isOpen()) {
+                            this.setStyle({ fillOpacity: 0, weight: 0, opacity: 0 });
+                        }
+                    });
+                    layer.on('click', function(e) {
+                        this.setStyle({ fillOpacity: 0.30, weight: 1, opacity: 0.7 });
+                    });
+                    layer.on('popupclose', function() {
+                        this.setStyle({ fillOpacity: 0, weight: 0, opacity: 0 });
+                    });
+                }
+            }).addTo(map);
+        });
+}
+
+btnDivisions.addEventListener('click', () => {
+    if (divisionsVisible) {
+        if (divisionsLayer) map.removeLayer(divisionsLayer);
+        divisionsVisible = false;
+        btnDivisions.classList.remove('active');
+    } else {
+        loadDivisions();
+        divisionsVisible = true;
+        btnDivisions.classList.add('active');
     }
 });
 
